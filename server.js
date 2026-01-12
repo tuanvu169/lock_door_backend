@@ -52,6 +52,41 @@ app.post('/login', async (req, res) => {
     res.status(500).json({ msg: 'Lỗi server', error: err.message });
   }
 });
+app.post('/register', async (req, res) => {
+  try {
+    let { username, password, role } = req.body;
+
+    if (!username || !password) {
+      return res.status(400).json({ msg: 'Thiếu username hoặc password' });
+    }
+
+    // Buộc role là "USER" nếu không gửi hoặc từ app (ADMIN chỉ tạo qua MongoDB thủ công)
+    role = role || 'USER';  // Nếu không gửi role → tự động "USER"
+    if (role !== 'USER') {
+      return res.status(403).json({ msg: 'Chỉ được tạo tài khoản USER' });
+    }
+
+    // Kiểm tra username trùng
+    const existingUser = await User.findOne({ username });
+    if (existingUser) {
+      return res.status(400).json({ msg: 'Username đã tồn tại' });
+    }
+
+    // Tạo user mới
+    const newUser = new User({
+      username,
+      password,  // plain text → hook sẽ hash
+      role       // luôn là "USER"
+    });
+
+    await newUser.save();
+
+    res.status(201).json({ msg: 'Tạo tài khoản USER thành công' });
+  } catch (err) {
+    console.error('Lỗi tạo user:', err);
+    res.status(500).json({ msg: 'Lỗi server', error: err.message });
+  }
+});
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
