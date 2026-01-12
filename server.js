@@ -91,4 +91,46 @@ app.post('/register', async (req, res) => {
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`🚀 Server chạy tại http://localhost:${PORT}`);
+
+  const HistoryLog = require('./models/HistoryLog');
+
+// Route ghi log mở/đóng cửa từ app
+app.post('/log-door', async (req, res) => {
+  try {
+    const { action, userId, username, status, note } = req.body;
+
+    if (!action || !['mở cửa', 'đóng cửa'].includes(action)) {
+      return res.status(400).json({ msg: 'Action không hợp lệ' });
+    }
+
+    const log = new HistoryLog({
+      action,
+      method: 'app',
+      userId,
+      username: username || 'Unknown',
+      status: status || 'thành công',
+      note: note || ''
+    });
+
+    await log.save();
+
+    res.status(201).json({ msg: 'Đã ghi log mở/đóng cửa' });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ msg: 'Lỗi server' });
+  }
+});
+app.get('/history-log', async (req, res) => {
+  try {
+    const { limit = 20 } = req.query;
+
+    const logs = await HistoryLog.find()
+      .sort({ timestamp: -1 })  // Mới nhất trước
+      .limit(parseInt(limit));
+
+    res.json(logs);
+  } catch (err) {
+    res.status(500).json({ msg: 'Lỗi server' });
+  }
+});
 });
