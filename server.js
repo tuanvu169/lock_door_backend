@@ -92,7 +92,7 @@ const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`🚀 Server chạy tại http://localhost:${PORT}`);
 
-  const HistoryLog = require('./models/HistoryLog');
+  const HistoryLog = require('./models/DoorHistory');
 
 // Route ghi log mở/đóng cửa từ app
 app.post('/log-door', async (req, res) => {
