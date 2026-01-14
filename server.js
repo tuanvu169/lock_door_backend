@@ -5,7 +5,7 @@ const cors = require('cors');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const User = require('./models/User');          // Model User (plain text password)
-const HistoryLog = require('./models/HistoryLog'); // Model lịch sử mở cửa
+const HistoryLog = require('./models/DoorHistory'); // Model lịch sử mở cửa
 const DoorHistory = require('./models/DoorHistory');
 
 const app = express();
