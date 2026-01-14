@@ -176,6 +176,25 @@ app.get('/houses', async (req, res) => {
     res.status(500).json({ msg: 'Lỗi server' });
   }
 });
+// Route lấy chi tiết 1 nhà (GET /houses/:id)
+app.get('/houses/:id', authMiddleware, async (req, res) => {
+  try {
+    const houseId = req.params.id;
+    const house = await House.findById(houseId);
+    if (!house) {
+      return res.status(404).json({ msg: 'Nhà không tồn tại' });
+    }
+
+    if (house.ownerId.toString() !== req.userId) {
+      return res.status(403).json({ msg: 'Bạn không có quyền xem nhà này' });
+    }
+
+    res.json(house);
+  } catch (err) {
+    console.error('Lỗi lấy chi tiết nhà:', err);
+    res.status(500).json({ msg: 'Lỗi server' });
+  }
+});
 // Route thêm khóa cửa vào nhà (PUT /houses/:id/doors)
 app.put('/houses/:id/doors', async (req, res) => {
   try {
