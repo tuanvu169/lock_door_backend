@@ -4,7 +4,8 @@ const mongoose = require('mongoose');
 const cors = require('cors');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
-const User = require('./models/User');  // Hoặc Account nếu bạn đã đổi tên model
+const User = require('./models/User');          // Model User (plain text password)
+const HistoryLog = require('./models/HistoryLog'); // Model lịch sử mở cửa
 
 const app = express();
 app.use(express.json());
@@ -15,84 +16,70 @@ mongoose.connect(process.env.MONGO_URI)
   .then(() => console.log('✅ MongoDB connected'))
   .catch(err => console.error('❌ MongoDB error:', err));
 
-// Route login (giữ nguyên, chỉ thay User nếu cần)
+// Route Đăng nhập (chỉ kiểm tra email + password plain text)
 app.post('/login', async (req, res) => {
   try {
-    const { username, password } = req.body;
-    if (!username || !password) {
-      return res.status(400).json({ msg: 'Thiếu thông tin' });
+    const { email, password } = req.body;
+    if (!email || !password) {
+      return res.status(400).json({ msg: 'Thiếu email hoặc password' });
     }
 
-    const user = await User.findOne({ username });
+    const user = await User.findOne({ email });
     if (!user) {
       return res.status(401).json({ msg: 'Tài khoản không tồn tại' });
     }
 
-    /*const match = await bcrypt.compare(password, user.password);
-    if (!match) {
+    // So sánh plain text
+    if (password !== user.passwordHash) {
       return res.status(401).json({ msg: 'Mật khẩu sai' });
-    }*/
-    if (password !== user.password.toString()) {  // .toString() để xử lý nếu là number
-  return res.status(401).json({ msg: 'Mật khẩu sai' });
-}
+    }
 
+    // Tạo token (không cần role)
     const token = jwt.sign(
-      { userId: user._id, role: user.role },
+      { userId: user._id },
       process.env.JWT_SECRET,
       { expiresIn: '1h' }
     );
 
     res.json({
       msg: 'Đăng nhập thành công',
-      role: user.role,
-      token
+      token,
+      name: user.name  // Trả tên để app hiển thị
     });
   } catch (err) {
     console.error(err);
     res.status(500).json({ msg: 'Lỗi server', error: err.message });
   }
 });
+
+// Route Đăng ký (role mặc định "USER", password plain text)
 app.post('/register', async (req, res) => {
   try {
-    let { username, password, role } = req.body;
+    const { name, email, password } = req.body;
 
-    if (!username || !password) {
-      return res.status(400).json({ msg: 'Thiếu username hoặc password' });
+    if (!name || !email || !password) {
+      return res.status(400).json({ msg: 'Thiếu thông tin (name, email, password)' });
     }
 
-    // Buộc role là "USER" nếu không gửi hoặc từ app (ADMIN chỉ tạo qua MongoDB thủ công)
-    role = role || 'USER';  // Nếu không gửi role → tự động "USER"
-    if (role !== 'USER') {
-      return res.status(403).json({ msg: 'Chỉ được tạo tài khoản USER' });
-    }
-
-    // Kiểm tra username trùng
-    const existingUser = await User.findOne({ username });
+    const existingUser = await User.findOne({ email });
     if (existingUser) {
-      return res.status(400).json({ msg: 'Username đã tồn tại' });
+      return res.status(400).json({ msg: 'Email đã tồn tại' });
     }
 
-    // Tạo user mới
     const newUser = new User({
-      username,
-      password,  // plain text → hook sẽ hash
-      role       // luôn là "USER"
+      name,
+      email,
+      passwordHash: password  // Lưu plain text
     });
 
     await newUser.save();
 
-    res.status(201).json({ msg: 'Tạo tài khoản USER thành công' });
+    res.status(201).json({ msg: 'Đăng ký thành công' });
   } catch (err) {
-    console.error('Lỗi tạo user:', err);
+    console.error('Lỗi đăng ký:', err);
     res.status(500).json({ msg: 'Lỗi server', error: err.message });
   }
 });
-
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-  console.log(`🚀 Server chạy tại http://localhost:${PORT}`);
-
-  const HistoryLog = require('./models/DoorHistory');
 
 // Route ghi log mở/đóng cửa từ app
 app.post('/log-door', async (req, res) => {
@@ -116,10 +103,12 @@ app.post('/log-door', async (req, res) => {
 
     res.status(201).json({ msg: 'Đã ghi log mở/đóng cửa' });
   } catch (err) {
-    console.error(err);
+    console.error('Lỗi ghi log:', err);
     res.status(500).json({ msg: 'Lỗi server' });
   }
 });
+
+// Route đọc lịch sử mở cửa
 app.get('/history-log', async (req, res) => {
   try {
     const { limit = 20 } = req.query;
@@ -130,7 +119,12 @@ app.get('/history-log', async (req, res) => {
 
     res.json(logs);
   } catch (err) {
+    console.error('Lỗi đọc lịch sử:', err);
     res.status(500).json({ msg: 'Lỗi server' });
   }
 });
+
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => {
+  console.log(`🚀 Server chạy tại http://localhost:${PORT}`);
 });
