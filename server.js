@@ -124,6 +124,8 @@ app.get('/history-log', async (req, res) => {
     res.status(500).json({ msg: 'Lỗi server' });
   }
 });
+
+
 // Route thêm nhà mới (POST /houses)
 app.post('/houses', async (req, res) => {
   try {
@@ -174,7 +176,50 @@ app.get('/houses', async (req, res) => {
     res.status(500).json({ msg: 'Lỗi server' });
   }
 });
+// Route thêm khóa cửa vào nhà (PUT /houses/:id/doors)
+app.put('/houses/:id/doors', async (req, res) => {
+  try {
+    const houseId = req.params.id;
+    const { name, location } = req.body;
 
+    if (!name) {
+      return res.status(400).json({ msg: 'Thiếu tên khóa cửa' });
+    }
+
+    // Kiểm tra token
+    const token = req.header('Authorization')?.replace('Bearer ', '');
+    if (!token) {
+      return res.status(401).json({ msg: 'Không có token' });
+    }
+
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const ownerId = decoded.userId;
+
+    // Tìm nhà và kiểm tra quyền sở hữu
+    const house = await House.findById(houseId);
+    if (!house) {
+      return res.status(404).json({ msg: 'Nhà không tồn tại' });
+    }
+
+    if (house.ownerId.toString() !== ownerId) {
+      return res.status(403).json({ msg: 'Bạn không có quyền thêm khóa cho nhà này' });
+    }
+
+    // Thêm khóa mới vào mảng doors
+    house.doors.push({
+      name,
+      location: location || '',
+      status: 'LOCKED'
+    });
+
+    await house.save();
+
+    res.json({ msg: 'Đã thêm khóa cửa thành công', house });
+  } catch (err) {
+    console.error('Lỗi thêm khóa:', err);
+    res.status(500).json({ msg: 'Lỗi server' });
+  }
+});
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`🚀 Server chạy tại http://localhost:${PORT}`);
