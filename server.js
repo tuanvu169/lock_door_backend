@@ -124,7 +124,6 @@ app.get('/history-log', async (req, res) => {
     res.status(500).json({ msg: 'Lỗi server' });
   }
 });
-const House = require('./models/House');
 
 // Route thêm nhà mới (POST /houses)
 app.post('/houses', async (req, res) => {
