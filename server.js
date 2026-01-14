@@ -6,6 +6,7 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const User = require('./models/User');          // Model User (plain text password)
 const HistoryLog = require('./models/HistoryLog'); // Model lịch sử mở cửa
+const DoorHistory = require('./models/DoorHistory');
 
 const app = express();
 app.use(express.json());
@@ -113,7 +114,7 @@ app.get('/history-log', async (req, res) => {
   try {
     const { limit = 20 } = req.query;
 
-    const logs = await HistoryLog.find()
+    const logs = await DoorHistory.find()
       .sort({ timestamp: -1 })  // Mới nhất trước
       .limit(parseInt(limit));
 
