@@ -124,7 +124,6 @@ app.get('/history-log', async (req, res) => {
     res.status(500).json({ msg: 'Lỗi server' });
   }
 });
-
 // Route thêm nhà mới (POST /houses)
 app.post('/houses', async (req, res) => {
   try {
@@ -134,38 +133,30 @@ app.post('/houses', async (req, res) => {
       return res.status(400).json({ msg: 'Thiếu tên nhà' });
     }
 
-    // Lấy token từ header Authorization
     const token = req.header('Authorization')?.replace('Bearer ', '');
     if (!token) {
-      return res.status(401).json({ msg: 'Không có token, vui lòng đăng nhập' });
+      return res.status(401).json({ msg: 'Không có token' });
     }
 
-    // Verify token để lấy userId (owner)
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
     const ownerId = decoded.userId;
 
-    // Tạo nhà mới
     const newHouse = new House({
       ownerId,
       name,
-      address: address || ''  // Address tùy chọn
+      address: address || ''
     });
 
     await newHouse.save();
 
-    res.status(201).json({
-      msg: 'Đã thêm nhà thành công',
-      house: newHouse
-    });
+    res.status(201).json({ msg: 'Thêm nhà thành công', house: newHouse });
   } catch (err) {
     console.error('Lỗi thêm nhà:', err);
-    if (err.name === 'JsonWebTokenError') {
-      return res.status(401).json({ msg: 'Token không hợp lệ' });
-    }
     res.status(500).json({ msg: 'Lỗi server' });
   }
 });
-// Route lấy danh sách nhà của user hiện tại
+
+// Route lấy danh sách nhà của user (GET /houses)
 app.get('/houses', async (req, res) => {
   try {
     const token = req.header('Authorization')?.replace('Bearer ', '');
@@ -180,10 +171,10 @@ app.get('/houses', async (req, res) => {
 
     res.json(houses);
   } catch (err) {
-    console.error('Lỗi lấy danh sách nhà:', err);
     res.status(500).json({ msg: 'Lỗi server' });
   }
 });
+
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`🚀 Server chạy tại http://localhost:${PORT}`);
